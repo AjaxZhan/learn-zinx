@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
 	"lean-zinx/ziface"
 	"net"
@@ -18,11 +19,22 @@ type Server struct {
 	Port int
 }
 
+// CallBackToClient 暂时写死的业务方法，后面理应由框架使用者传入
+func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+	fmt.Println("[Conn Handle] CallBackToClient ...")
+	if _, err := conn.Write(data[:cnt]); err != nil {
+		fmt.Println("Write back buf error ", err)
+		return errors.New("CallBackToClient error")
+	}
+
+	return nil
+}
+
 // Start 启动服务器
 func (s *Server) Start() {
 	fmt.Printf("[Start] Server Listener at IP: %s,Port %d, is starting\n", s.IP, s.Port)
 
-	// 异步
+	// server的协程
 	go func() {
 		// 获取TCP的Addr
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
@@ -36,6 +48,8 @@ func (s *Server) Start() {
 			fmt.Println("Listen ", s.IPVersion, " error:", err)
 			return
 		}
+		// 比较邋遢的ConnID
+		var cid uint32 = 0
 		fmt.Println("start Zinx server success ", s.Name, " succ listening...")
 		// 阻塞等待客户端连接，处理客户端业务
 		for {
@@ -44,25 +58,12 @@ func (s *Server) Start() {
 				fmt.Println("Accept error: ", err)
 				continue
 			}
-			// 已经和客户端建立连接，执行业务
-			// 这里做一个最基本的512字节长度的回显业务，用go来承载
-			go func() {
-				for {
-					buf := make([]byte, 512)
-					cnt, err := conn.Read(buf)
-					if err != nil {
-						fmt.Println("Recv buf error:", err)
-						continue
-					}
-					fmt.Printf("recv client buf:%s, cnt: %d\n", buf, cnt)
-					// 回显
-					if _, err := conn.Write(buf[0:cnt]); err != nil {
-						fmt.Println("Write back buf error:", err)
-						continue
-					}
+			// 将处理新连接的业务方法和conn绑定，得到我们的连接
+			dealConn := NewConnection(conn, cid, CallBackToClient)
+			cid++
 
-				}
-			}()
+			// 启动业务
+			go dealConn.Start()
 		}
 	}()
 
@@ -78,7 +79,6 @@ func (s *Server) Serve() {
 	s.Start()
 
 	// TODO 为什么不在Start内阻塞？这样可以在启动后做一些额外的业务，这样Server才有意义。Start只进行监听和处理业务功能。
-
 	// Serve阻塞
 	select {}
 }
@@ -89,7 +89,7 @@ func NewServer(name string) ziface.IServer {
 		Name:      name,
 		IPVersion: "tcp4",
 		IP:        "0.0.0.0",
-		Port:      8899,
+		Port:      8999,
 	}
 	return s
 
