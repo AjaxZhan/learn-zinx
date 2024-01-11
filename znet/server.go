@@ -54,6 +54,8 @@ func (s *Server) Start() {
 						fmt.Println("Recv buf error:", err)
 						continue
 					}
+					fmt.Printf("recv client buf:%s, cnt: %d\n", buf, cnt)
+					// 回显
 					if _, err := conn.Write(buf[0:cnt]); err != nil {
 						fmt.Println("Write back buf error:", err)
 						continue
