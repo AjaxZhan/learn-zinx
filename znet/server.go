@@ -17,6 +17,8 @@ type Server struct {
 	IP string
 	// 端口
 	Port int
+	// 添加Router对象
+	Router ziface.IRouter
 }
 
 // CallBackToClient 暂时写死的业务方法，后面理应由框架使用者传入
@@ -59,7 +61,7 @@ func (s *Server) Start() {
 				continue
 			}
 			// 将处理新连接的业务方法和conn绑定，得到我们的连接
-			dealConn := NewConnection(conn, cid, CallBackToClient)
+			dealConn := NewConnection(conn, cid, s.Router)
 			cid++
 
 			// 启动业务
@@ -83,6 +85,11 @@ func (s *Server) Serve() {
 	select {}
 }
 
+func (s *Server) AddRouter(router ziface.IRouter) {
+	s.Router = router
+	fmt.Println("Add Router successfully!")
+}
+
 // NewServer 初始化Server
 func NewServer(name string) ziface.IServer {
 	s := &Server{
@@ -90,6 +97,7 @@ func NewServer(name string) ziface.IServer {
 		IPVersion: "tcp4",
 		IP:        "0.0.0.0",
 		Port:      8999,
+		Router:    nil,
 	}
 	return s
 

@@ -21,4 +21,4 @@ type IConnection interface {
 
 // HandleFunc 定义一个处理连接业务的抽象方法，和连接绑定
 // 参数：连接、数据、数据长度
-type HandleFunc func(*net.TCPConn, []byte, int) error
+//type HandleFunc func(*net.TCPConn, []byte, int) error

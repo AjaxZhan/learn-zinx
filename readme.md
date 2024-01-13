@@ -55,7 +55,7 @@ server.go在start方法中启动一个go程创建套接字，通过NewConnection
 connection.go的start方法负责开启读业务和写业务这两个Go程。
 目前只实现了读业务的Go程，且业务处理方法的回调在server.go写死，实现写回功能。
 
-## V0.3 基础router模块
+## V0.3 基础router模块(单一Router)
 
 ### Request请求封装
 
@@ -69,12 +69,27 @@ connection.go的start方法负责开启读业务和写业务这两个Go程。
 
 ### Router模块的定义
 
+IRouter：抽象层
+- 方法：
+  - 处理业务之前的方法
+  - 处理业务的方法
+  - 处理业务之后的方法
 
+BaseRouter：实现层
+实现router时先嵌入BaseRouter，框架使用者根据需求重写这个方法。
 
+### zinx集成Router
 
+1. IServer增添添加路由方法
+2. Server添加Router成员，去掉之前的回调。
+3. Connection类绑定Router成员，去掉handleAPI
+4. Connection中调用Router处理业务——模板方法设计模式
 
+### 测试——使用ZinxV0.3开发
 
-
-
+1. 创建server
+2. 创建自定义Router，继承BaseRouter，重写三个方法
+3. 添加Router
+4. 启动Server
 
 

@@ -14,20 +14,20 @@ type Connection struct {
 	ConnID uint32
 	// 连接状态
 	IsClosed bool
-	// 绑定的业务方法
-	handleAPI ziface.HandleFunc
 	// 告知连接是否退出的 channel
 	ExitChan chan bool
+	// 该连接处理方法的Router
+	Router ziface.IRouter
 }
 
 // NewConnection 初始化连接的方法
-func NewConnection(conn *net.TCPConn, connID uint32, callbackAPI ziface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, router ziface.IRouter) *Connection {
 	c := &Connection{
-		Conn:      conn,
-		ConnID:    connID,
-		handleAPI: callbackAPI,
-		IsClosed:  false,
-		ExitChan:  make(chan bool, 1),
+		Conn:     conn,
+		ConnID:   connID,
+		IsClosed: false,
+		ExitChan: make(chan bool, 1),
+		Router:   router,
 	}
 	return c
 }
@@ -41,17 +41,32 @@ func (c *Connection) StartReader() {
 	for {
 		// 读客户端数据到buf中，最大512字节
 		buf := make([]byte, 512)
-		cnt, err := c.Conn.Read(buf)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("Recv buf err", err)
 			// 这个包读失败
 			continue
 		}
-		// 调用当前连接所绑定的HandleAPI
-		if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
-			fmt.Println("ConnID", c.ConnID, " handle is error:", err)
-			break
+
+		// 封装request
+		req := Request{
+			conn: c,
+			data: buf,
 		}
+
+		// 开GO程，从路由中找到注册的conn对应的router调用
+		// 模板方法设计模式
+		go func(request ziface.IRequest) {
+			c.Router.PreHandle(request)
+			c.Router.Handle(request)
+			c.Router.PostHandle(request)
+		}(&req)
+
+		// 调用当前连接所绑定的HandleAPI
+		//if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
+		//	fmt.Println("ConnID", c.ConnID, " handle is error:", err)
+		//	break
+		//}
 	}
 
 }
