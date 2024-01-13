@@ -1,3 +1,8 @@
+# Learn-zinx
+
+This repository is used to record my process of learning the zinx framework.
+
+zinx framework repository address：[https://github.com/aceld/zinx](https://github.com/aceld/zinx)
 
 ## V0.1 基础server模块
 
@@ -49,6 +54,25 @@ server.go在start方法中启动一个go程创建套接字，通过NewConnection
 
 connection.go的start方法负责开启读业务和写业务这两个Go程。
 目前只实现了读业务的Go程，且业务处理方法的回调在server.go写死，实现写回功能。
+
+## V0.3 基础router模块
+
+### Request请求封装
+
+目的：将conn和数据绑定在一起，以request作为请求的原子操作。
+属性：
+- 连接 iconnection
+- 请求数据
+方法：
+- 获取当前连接
+- 获取当前数据
+
+### Router模块的定义
+
+
+
+
+
 
 
 
