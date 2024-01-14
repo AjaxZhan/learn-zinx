@@ -40,7 +40,7 @@ func (pr *PingRouter) PostHandle(request ziface.IRequest) {
 
 func main() {
 	// 创建Server句柄
-	s := znet.NewServer("[zine V0.3]")
+	s := znet.NewServer("[zine V0.4]")
 
 	// 添加自定义的Router
 	s.AddRouter(&PingRouter{})

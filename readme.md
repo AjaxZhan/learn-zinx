@@ -92,4 +92,21 @@ BaseRouter：实现层
 3. 添加Router
 4. 启动Server
 
+## V0.4 全局配置模块
+
+这里以JSON格式为配置文件，用户编写zinx.json。
+放到/config/zinx.json中。
+
+内容包括：
+- Name：服务器名
+- Host：监听的IP地址
+- TcpPort：端口
+- MaxConn：允许最大客户端数量
+
+### 创建全局配置模块
+
+`utils/globalobj.go`
+- 提供全局globalobj对象
+- init：读取json配置，序列化到globalobj中
+
 

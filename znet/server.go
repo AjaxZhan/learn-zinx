@@ -3,6 +3,7 @@ package znet
 import (
 	"errors"
 	"fmt"
+	"lean-zinx/utils"
 	"lean-zinx/ziface"
 	"net"
 )
@@ -34,8 +35,11 @@ func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
 
 // Start 启动服务器
 func (s *Server) Start() {
-	fmt.Printf("[Start] Server Listener at IP: %s,Port %d, is starting\n", s.IP, s.Port)
-
+	// TODO 制作一个日志模块
+	fmt.Printf("[Zinx]ServerName:%s, listener at IP:%s,Port:%d,is starting...\n",
+		utils.GlobalObject.Name, utils.GlobalObject.Host, utils.GlobalObject.TcpPort)
+	fmt.Printf("[Zinx] Version %s, MaxConn:%d, MaxPackageSize:%d,\n",
+		utils.GlobalObject.Version, utils.GlobalObject.MaxConn, utils.GlobalObject.MaxPackageSize)
 	// server的协程
 	go func() {
 		// 获取TCP的Addr
@@ -93,10 +97,10 @@ func (s *Server) AddRouter(router ziface.IRouter) {
 // NewServer 初始化Server
 func NewServer(name string) ziface.IServer {
 	s := &Server{
-		Name:      name,
+		Name:      utils.GlobalObject.Name,
 		IPVersion: "tcp4",
-		IP:        "0.0.0.0",
-		Port:      8999,
+		IP:        utils.GlobalObject.Host,
+		Port:      utils.GlobalObject.TcpPort,
 		Router:    nil,
 	}
 	return s
