@@ -109,4 +109,21 @@ BaseRouter：实现层
 - 提供全局globalobj对象
 - init：读取json配置，序列化到globalobj中
 
+## V0.5 消息封装
+
+### 定义消息结构
+
+定义消息结构：Message
+- 属性：
+  - 消息ID
+  - 消息长度
+  - 消息内容
+- 方法：
+  - set
+  - get
+
+### 解决TCP粘包问题
+
+消息的TLV序列化：
+一个完整的消息 = Head(DataLen + ID) + Body(Data)
 
