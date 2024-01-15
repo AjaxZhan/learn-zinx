@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"lean-zinx/utils"
 	"lean-zinx/ziface"
 )
@@ -32,12 +33,13 @@ func (dp *DataPack) Pack(msg ziface.IMessage) ([]byte, error) {
 	// 创建一个存放bytes字节的缓冲
 	dataBuf := bytes.NewBuffer([]byte{})
 
-	// 将DataLen和ID写入
+	// 写入DataLen
 	// 小端传输
 	err := binary.Write(dataBuf, binary.LittleEndian, msg.GetDataLen())
 	if err != nil {
 		return nil, err
 	}
+	// 写入MessageId
 	err = binary.Write(dataBuf, binary.LittleEndian, msg.GetMessageId())
 	if err != nil {
 		return nil, err
@@ -65,15 +67,16 @@ func (dp *DataPack) UnPack(binaryData []byte) (ziface.IMessage, error) {
 		return nil, err
 	}
 
-	// 判断是否超过最大包长
-	if utils.GlobalObject.MaxPackageSize > 0 && msg.DataLen > utils.GlobalObject.MaxPackageSize {
-		return nil, errors.New("too large package size")
-	}
-
 	// 读ID
-	err = binary.Read(reader, binary.LittleEndian, &msg.DataLen)
+	err = binary.Read(reader, binary.LittleEndian, &msg.Id)
 	if err != nil {
 		return nil, err
+	}
+
+	// 判断是否超过最大包长
+	if utils.GlobalObject.MaxPackageSize > 0 && msg.DataLen > utils.GlobalObject.MaxPackageSize {
+		return nil, errors.New(fmt.Sprintf("MaxPackageSize:%d,dataLen:%d,error: too large data recv!",
+			utils.GlobalObject.MaxPackageSize, msg.DataLen))
 	}
 
 	return msg, nil
