@@ -16,8 +16,10 @@ type Connection struct {
 	ConnID uint32
 	// 连接状态
 	IsClosed bool
-	// 告知连接是否退出的 channel
+	// 告知连接是否退出的 channel（Reader告知Writer）
 	ExitChan chan bool
+	// 无缓冲管道，用于读、写协程之间的通信
+	msgChan chan []byte
 	// 该连接处理方法的Router
 	Router ziface.IRouter
 	// 消息的管理msgID和对应的处理业务API关系
@@ -32,14 +34,36 @@ func NewConnection(conn *net.TCPConn, connID uint32, msgHandler ziface.IMsgHandl
 		IsClosed:   false,
 		ExitChan:   make(chan bool, 1),
 		MsgHandler: msgHandler,
+		msgChan:    make(chan []byte),
 	}
 	return c
 }
 
-// StartReader 连接的读业务
+// StartWriter 写消息的的协程，专门用于将消息发送给客户端
+func (c *Connection) StartWriter() {
+	fmt.Println("[Writer GoRoutine is running...]")
+	defer fmt.Println(c.RemoteAddr().String(), " [conn Writer exit]")
+	// 阻塞等待Channel的消息
+	for {
+		select {
+		case data := <-c.msgChan:
+			// 写给客户端
+			if _, err := c.Conn.Write(data); err != nil {
+				fmt.Println("Send data error:", err)
+				return
+			}
+		case <-c.ExitChan:
+			// Reader已经退出, Writer也要退出
+			return
+		}
+
+	}
+}
+
+// StartReader 读消息的协程
 func (c *Connection) StartReader() {
-	fmt.Println("Reader GoRoutine is running...")
-	defer fmt.Println("connID=", c.ConnID, " Reader is exit, the remote addr is ", c.RemoteAddr().String())
+	fmt.Println("[Reader GoRoutine is running...]")
+	defer fmt.Println("connID=", c.ConnID, " [Reader is exit], the remote addr is ", c.RemoteAddr().String())
 	defer c.Stop()
 
 	for {
@@ -99,11 +123,13 @@ func (c *Connection) SendMsg(msgId uint32, data []byte) error {
 	}
 
 	// 将数据发送给客户端
-	_, err = c.Conn.Write(binaryMsg)
-	if err != nil {
-		fmt.Println("msgId:", msgId, "error:", err)
-		return errors.New("conn write error")
-	}
+	c.msgChan <- binaryMsg
+
+	//_, err = c.Conn.Write(binaryMsg)
+	//if err != nil {
+	//	fmt.Println("msgId:", msgId, "error:", err)
+	//	return errors.New("conn write error")
+	//}
 
 	return nil
 }
@@ -113,7 +139,8 @@ func (c *Connection) Start() {
 	fmt.Println("Connection Start ... ,ConnID=", c.ConnID)
 	// 启动从当前连接读数据的业务的携程
 	go c.StartReader()
-	// TODO 启动写数据业务
+	// 启动写数据业务
+	go c.StartWriter()
 }
 
 // Stop 停止连接，结束当前连接的工作
@@ -123,12 +150,15 @@ func (c *Connection) Stop() {
 		return
 	}
 	// 关闭socket连接
-
 	c.IsClosed = true
 	_ = c.Conn.Close()
 
+	// 告知Writer已经关闭
+	c.ExitChan <- true
+
 	// 关闭管道
 	close(c.ExitChan)
+	close(c.msgChan)
 }
 
 // GetTCPConnection 获取当前连接绑定的conn

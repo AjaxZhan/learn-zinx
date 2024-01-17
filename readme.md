@@ -151,6 +151,13 @@ BaseRouter：实现层
 3. connection的Router属性替换为MsgHandler
 4. connection的startReader中的调度改成MsgHandler的调度方法。
 
+## V0.7 读写分离
+
+1. 添加Writer go-routine
+2. 添加Reader协程和Writer协程之间通信的channel
+3. 将Reader中的直接写回逻辑改成发送数据给channel
+4. 启动Reader和Writer协同工作
+
 
 
 
