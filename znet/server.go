@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"errors"
 	"fmt"
 	"lean-zinx/utils"
 	"lean-zinx/ziface"
@@ -18,20 +17,33 @@ type Server struct {
 	IP string
 	// 端口
 	Port int
-	// 添加Router对象
-	Router ziface.IRouter
+	// 消息管理模块，绑定MsgID和对应的API关系
+	MsgHandler ziface.IMsgHandler
+}
+
+// NewServer 初始化Server
+func NewServer(name string) ziface.IServer {
+	s := &Server{
+		Name:       utils.GlobalObject.Name,
+		IPVersion:  "tcp4",
+		IP:         utils.GlobalObject.Host,
+		Port:       utils.GlobalObject.TcpPort,
+		MsgHandler: NewMsgHandle(),
+	}
+	return s
+
 }
 
 // CallBackToClient 暂时写死的业务方法，后面理应由框架使用者传入
-func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
-	fmt.Println("[Conn Handle] CallBackToClient ...")
-	if _, err := conn.Write(data[:cnt]); err != nil {
-		fmt.Println("Write back buf error ", err)
-		return errors.New("CallBackToClient error")
-	}
-
-	return nil
-}
+//func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+//	fmt.Println("[Conn Handle] CallBackToClient ...")
+//	if _, err := conn.Write(data[:cnt]); err != nil {
+//		fmt.Println("Write back buf error ", err)
+//		return errors.New("CallBackToClient error")
+//	}
+//
+//	return nil
+//}
 
 // Start 启动服务器
 func (s *Server) Start() {
@@ -65,7 +77,7 @@ func (s *Server) Start() {
 				continue
 			}
 			// 将处理新连接的业务方法和conn绑定，得到我们的连接
-			dealConn := NewConnection(conn, cid, s.Router)
+			dealConn := NewConnection(conn, cid, s.MsgHandler)
 			cid++
 
 			// 启动业务
@@ -89,20 +101,7 @@ func (s *Server) Serve() {
 	select {}
 }
 
-func (s *Server) AddRouter(router ziface.IRouter) {
-	s.Router = router
+func (s *Server) AddRouter(msgID uint32, router ziface.IRouter) {
+	s.MsgHandler.AddRouter(msgID, router)
 	fmt.Println("Add Router successfully!")
-}
-
-// NewServer 初始化Server
-func NewServer(name string) ziface.IServer {
-	s := &Server{
-		Name:      utils.GlobalObject.Name,
-		IPVersion: "tcp4",
-		IP:        utils.GlobalObject.Host,
-		Port:      utils.GlobalObject.TcpPort,
-		Router:    nil,
-	}
-	return s
-
 }

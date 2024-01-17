@@ -133,5 +133,26 @@ BaseRouter：实现层
 2. 修改conn读取数据的机制，将单纯的读取二进制数据改成拆包形式读取。
 3. 给conn提供发包机制，将发送的消息进行打包。
 
+## V0.6 多路由机制
+
+### 消息管理模块
+
+消息管理模块：支持多路由业务Api调度。
+属性：
+- 消息ID和Router的映射表
+方法：
+- 根据MsgId来调度Router方法
+- 添加Router方法到Map集合中
+
+### 消息管理模块集成到Zinx框架中
+
+1. 将Server中的Router属性，替换为MsgHandler属性。
+2. 将Server之前的AddRouter替换为MsgHandler的相关API。
+3. connection的Router属性替换为MsgHandler
+4. connection的startReader中的调度改成MsgHandler的调度方法。
+
+
+
+
 
 
