@@ -1,8 +1,9 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
-	"lean-zinx/utils"
+	"io"
 	"lean-zinx/ziface"
 	"net"
 )
@@ -40,19 +41,37 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 
 	for {
-		// 读客户端数据到buf中，最大512字节
-		buf := make([]byte, utils.GlobalObject.MaxPackageSize)
-		_, err := c.Conn.Read(buf)
+		// 创建拆包解包对象
+		dp := NewDataPack()
+		// 读取二进制流头部
+		dataHead := make([]byte, dp.GetHeadLen())
+		_, err := io.ReadFull(c.GetTCPConnection(), dataHead)
 		if err != nil {
-			fmt.Println("Recv buf err", err)
-			// 这个包读失败
-			continue
+			fmt.Println("Read Message Head error:", err)
+			break
 		}
+		// 将Msg得到msgID和msgDataLen，封装为Message
+		msg, err := dp.UnPack(dataHead)
+		if err != nil {
+			fmt.Println("unpack error:", err)
+			break
+		}
+		// 再次读取Message的Data
+		var data []byte
+		if msg.GetDataLen() > 0 {
+			data = make([]byte, msg.GetDataLen())
+			_, err := io.ReadFull(c.GetTCPConnection(), data)
+			if err != nil {
+				fmt.Println("read msg data error:", err)
+				break
+			}
+		}
+		msg.SetData(data)
 
 		// 封装request
 		req := Request{
 			conn: c,
-			data: buf,
+			msg:  msg,
 		}
 
 		// 开GO程，从路由中找到注册的conn对应的router调用
@@ -63,13 +82,33 @@ func (c *Connection) StartReader() {
 			c.Router.PostHandle(request)
 		}(&req)
 
-		// 调用当前连接所绑定的HandleAPI
-		//if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
-		//	fmt.Println("ConnID", c.ConnID, " handle is error:", err)
-		//	break
-		//}
 	}
 
+}
+
+// SendMsg 提供发送数据方法，将要发送给客户端的数据进行封包再发送
+func (c *Connection) SendMsg(msgId uint32, data []byte) error {
+
+	if c.IsClosed == true {
+		return errors.New("connection closed when send msg")
+	}
+
+	// 封包
+	dp := NewDataPack()
+	binaryMsg, err := dp.Pack(NewMessagePack(msgId, data))
+	if err != nil {
+		fmt.Println("Send Message error when Pack:", err, " MessageId:", msgId)
+		return errors.New("pack error msg")
+	}
+
+	// 将数据发送给客户端
+	_, err = c.Conn.Write(binaryMsg)
+	if err != nil {
+		fmt.Println("msgId:", msgId, "error:", err)
+		return errors.New("conn write error")
+	}
+
+	return nil
 }
 
 // Start 启动连接，让当前连接进入工作状态
@@ -108,9 +147,4 @@ func (c *Connection) GetConnID() uint32 {
 // RemoteAddr 获取远程的TCP状态，包括IP和Port
 func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
-}
-
-// Send 发送数据给远程客户端
-func (c *Connection) Send(data []byte) error {
-	return nil
 }

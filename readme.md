@@ -127,3 +127,11 @@ BaseRouter：实现层
 消息的TLV序列化：
 一个完整的消息 = Head(DataLen + ID) + Body(Data)
 
+### 将消息封装机制集成到Zinx框架中
+
+1. 将Message添加到request属性中。
+2. 修改conn读取数据的机制，将单纯的读取二进制数据改成拆包形式读取。
+3. 给conn提供发包机制，将发送的消息进行打包。
+
+
+

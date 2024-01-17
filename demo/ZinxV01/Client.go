@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"lean-zinx/znet"
 	"net"
 	"time"
 )
@@ -16,20 +18,42 @@ func main() {
 		fmt.Println("Connect Server error : ", err)
 		return
 	}
-	// 使用write方法写数据
 	for {
-		_, err := conn.Write([]byte("Hello, Zinx V0.1 ..."))
+		dp := znet.NewDataPack()
+		// 封包
+		binaryMessage, err := dp.Pack(znet.NewMessagePack(0, []byte("Zinx V0.5 client Test Message...")))
 		if err != nil {
-			fmt.Println("Write error:", err)
+			fmt.Println("Client pack error:", err)
 			return
 		}
-		buf := make([]byte, 512)
-		cnt, err := conn.Read(buf)
+		// 写数据
+		_, err = conn.Write(binaryMessage)
 		if err != nil {
-			fmt.Println("Read err : ", err)
+			fmt.Println("Client write message error:", err)
 			return
 		}
-		fmt.Printf("Server Return Message%s, cnt= %d: \n", buf, cnt)
+		// 服务器回复Message：ID=1
+		// 先读取头部
+		binaryHead := make([]byte, dp.GetHeadLen())
+		_, err = io.ReadFull(conn, binaryHead)
+		if err != nil {
+			fmt.Println("Client read head error:", err)
+		}
+		// 将二进制Head拆包到Message
+		msg, err := dp.UnPack(binaryHead)
+		if err != nil {
+			fmt.Println("Client Unpack error:", err)
+		}
+		// 再进行第二次读取，读取Data
+		if msg.GetDataLen() > 0 {
+			msg := msg.(*znet.Message)
+			msg.Data = make([]byte, msg.GetDataLen())
+			_, err = io.ReadFull(conn, msg.Data)
+			if err != nil {
+				fmt.Println("Client read data error:", err)
+			}
+			fmt.Println("Recv Message ID:", msg.Id, " Len=", msg.GetMessageId(), " data=", string(msg.GetData()))
+		}
 		// CPU阻塞，CPU干其它事情
 		time.Sleep(1 * time.Second)
 	}
