@@ -189,6 +189,41 @@ Reader和Writer是阻塞的，不会占用CPU，但是剩下的一个协程是�
    1. 开启并调用消息队列以及工作池，创建Server的时候就开启。
    2. 将从客户端处理的消息发送给当前Worker的工作池来处理。
 
+## V0.9 连接管理模块
+
+### 概况
+
+1. 创建连接管理模块，为框架增加连接个数的限定。
+2. 将连接管理模块集成到zinx框架中
+   1. 将ConnManager添加到Server模块中。
+   2. 每次和客户端建立连接后，添加到ConnManager。
+   3. 每次添加的时候判断是否已经超出最大值
+   4. 每次和客户端断开连接之后，将连接从ConnManager中删除。
+3. 添加 创建连接之前以及销毁连接之前的业务
+
+ConnManager：
+- 属性
+  - conn的集合（Map结构）
+  - 针对Map做一个互斥锁
+- 方法
+  - 添加连接
+  - 删除连接
+  - 根据连接ID查找对应的连接
+  - 总连接个数
+  - 清理全部连接
+
+Server添加
+- 属性：
+  - onConnStart
+  - onConnStop
+- 方法：
+  - 注册onConnStart
+  - 注册onConnStop
+  - 调用onConnStart
+  - 调用onConnStop
+
+
+
 
 
 

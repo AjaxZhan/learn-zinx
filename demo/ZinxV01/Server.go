@@ -57,9 +57,28 @@ func (hzr *HelloZinxRouter) Handle(request ziface.IRequest) {
 //	}
 //}
 
+// DoConnectionBegin 创建连接后执行
+func DoConnectionBegin(conn ziface.IConnection) {
+	fmt.Println("==> DoConnectionBegin is called.")
+	err := conn.SendMsg(202, []byte("服务器创建连接后方法被执行！"))
+	if err != nil {
+		fmt.Println("DoConnectionBegin error:", err)
+	}
+}
+
+func DoConnectionLost(conn ziface.IConnection) {
+	fmt.Println("==> DoConnectionLost is called. connID=", conn.GetConnID())
+}
+
+// 创建连接断开前执行
+
 func main() {
 	// 创建Server句柄
-	s := znet.NewServer("[zine V0.8]")
+	s := znet.NewServer("[zine V0.9]")
+
+	// 注册连接创建的钩子和销毁的钩子
+	s.SetOnConnStart(DoConnectionBegin)
+	s.SetOnConnStop(DoConnectionLost)
 
 	// 添加自定义的Router
 	s.AddRouter(0, &PingRouter{})
