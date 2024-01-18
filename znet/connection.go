@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"lean-zinx/utils"
 	"lean-zinx/ziface"
 	"net"
 )
@@ -100,8 +101,14 @@ func (c *Connection) StartReader() {
 			msg:  msg,
 		}
 
-		// 根据绑定好的msgID找到处理API业务执行
-		go c.MsgHandler.DoMsgHandle(&req)
+		// 判断是否开启工作池
+		if utils.GlobalObject.WorkPoolSize > 0 {
+			// 已经开启工作池机制，将消息发送给工作池
+			c.MsgHandler.SendMsgToTaskQueue(&req)
+		} else {
+			// 没有开启工作池，直接开启一个go程即可
+			go c.MsgHandler.DoMsgHandle(&req)
+		}
 
 	}
 
@@ -168,7 +175,7 @@ func (c *Connection) GetTCPConnection() *net.TCPConn {
 
 // GetConnID 获取当前连接的连接ID
 func (c *Connection) GetConnID() uint32 {
-	return c.GetConnID()
+	return c.ConnID
 }
 
 // RemoteAddr 获取远程的TCP状态，包括IP和Port

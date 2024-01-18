@@ -158,6 +158,39 @@ BaseRouter：实现层
 3. 将Reader中的直接写回逻辑改成发送数据给channel
 4. 启动Reader和Writer协同工作
 
+## V0.8 消息队列和多任务
+
+### 需求
+
+上个版本的弊端：
+客户每次进行连接，流程是先开辟Start协程，Start协程启动DoMsgHandle协程，将数据发送给channel，Writer协程从channel中拿数据。
+即每次启动一个新的连接，都需要开辟三个协程。
+Reader和Writer是阻塞的，不会占用CPU，但是剩下的一个协程是处理客户端业务，是占用CPU的。
+
+改进：
+处理业务的go程改成指定数量的，CPU在调度go程只需要在这几个之间切换即可。
+
+![img.png](assets/img.png)
+
+### 实现
+
+1. 创建消息队列
+   1. 在MsgHandler中添加属性：消息队列（管道集合）、worker工作池的数量(配置文件配置)
+2. 创建多任务Worker工作池并启动
+   1. 根据WorkerPoolSize数量，Worker。
+   2. 每个Worker都应该用一个Go承载。
+   3. 只需要永远阻塞与当前Worker对应的Channel的消息。
+   4. 一旦有消息到来，Worker调用路由处理消息。
+3. 将之前的发送消息改成消息发送给消息队列和worker工作池进行处理
+   1. 定义方法，将消息发送给工作池的队列。
+   2. 设计算法，保证每个Worker受到任务的均衡的。这里做一个简单的平均分配。
+   3. 让哪个Worker处理，只需要将request请求发送给对应的taskQueue即可。
+4. 将消息队列集成到zinx
+   1. 开启并调用消息队列以及工作池，创建Server的时候就开启。
+   2. 将从客户端处理的消息发送给当前Worker的工作池来处理。
+
+
+
 
 
 

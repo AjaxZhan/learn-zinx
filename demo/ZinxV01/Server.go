@@ -59,7 +59,7 @@ func (hzr *HelloZinxRouter) Handle(request ziface.IRequest) {
 
 func main() {
 	// 创建Server句柄
-	s := znet.NewServer("[zine V0.6]")
+	s := znet.NewServer("[zine V0.8]")
 
 	// 添加自定义的Router
 	s.AddRouter(0, &PingRouter{})
